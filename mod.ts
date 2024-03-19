@@ -18,8 +18,8 @@ export class KvCache<T> {
     key:Deno.KvKey
     gate:Gate<void>|null
     kv:Deno.Kv
-    info:AIQ<string>
-    errors:AIQ<Error>
+    out:AIQ<string>
+    err:AIQ<Error>
 
     constructor(kv:Deno.Kv, key:Deno.KvKey, fallbacks:Fallbacks<T>) {
         this.kv = kv
@@ -27,8 +27,8 @@ export class KvCache<T> {
         this.timestamp = Date.now()
         this.key = key
         this.gate = null
-        this.info = new AIQ<string>
-        this.errors = new AIQ<Error>
+        this.out = new AIQ<string>
+        this.err = new AIQ<Error>
     }
     
     async get() {
@@ -36,7 +36,7 @@ export class KvCache<T> {
         const expireIn = this.expireIn ?? this.fallbacks.expireIn
         const elapsed = Date.now() - this.timestamp
 
-        if (expireIn >= elapsed) return this.value ?? this.fallbacks.value
+        if (elapsed < expireIn) return this.value ?? this.fallbacks.value
 
         if (this.gate) return this.value ?? this.fallbacks.value
         this.gate = new Gate()
@@ -44,10 +44,10 @@ export class KvCache<T> {
         const lazy:Lazy<Deno.KvEntryMaybe<KvCacheEntry<T>>> = () => this.kv.get<KvCacheEntry<T>>(this.key)
         const snail = new Snail(lazy)
         snail.born
-            .then(() => this.info.push(`${Date.now()} KvCache.get getting key [${this.key}]`))
+            .then(() => this.out.push(`KvCache.get getting key [${this.key}]`))
         snail.died
-            .then(value => this.info.push(`${Date.now()} KvCache.get got key [${this.key}], value ${JSON.stringify(value,(_,v)=>typeof v=='bigint'?''+v:v)}`))
-            .catch(reason => this.errors.push(new Error(`${Date.now()} KvCache.get failed to retrieve key [${this.key}]`, { cause: reason })))
+            .then(value => this.out.push(`KvCache.get got key [${this.key}], value ${JSON.stringify(value,(_,v)=>typeof v=='bigint'?''+v:v)}`))
+            .catch(reason => this.err.push(new Error(`KvCache.get failed to retrieve key [${this.key}]`, { cause: reason })))
         const kvem = await snail.lazy().catch(() => {})
         if (this.gate === null) return this.value ?? this.fallbacks.value
         const cached = kvem?.value
@@ -73,10 +73,10 @@ export class KvCache<T> {
         const lazy:Lazy<Deno.KvCommitResult> = () => this.kv.set(this.key, setter)
         const snail = new Snail(lazy)
         snail.born
-            .then(() => this.info.push(`${Date.now()} KvCache.set setting key [${this.key}] to value ${JSON.stringify(setter,(_,v)=>typeof v=='bigint'?''+v:v)}`))
+            .then(() => this.out.push(`KvCache.set setting key [${this.key}] to value ${JSON.stringify(setter,(_,v)=>typeof v=='bigint'?''+v:v)}`))
         snail.died
-            .then(() => this.info.push(`${Date.now()} KvCache.get set key [${this.key}] to value ${JSON.stringify(setter,(_,v)=>typeof v=='bigint'?''+v:v)}`))
-            .catch(reason => this.errors.push(new Error(`${Date.now()} KvCache.set failed setting key [${this.key}] to value ${JSON.stringify(setter,(_,v)=>typeof v=='bigint'?''+v:v)}`, { cause: reason })))
+            .then(() => this.out.push(`KvCache.get set key [${this.key}] to value ${JSON.stringify(setter,(_,v)=>typeof v=='bigint'?''+v:v)}`))
+            .catch(reason => this.err.push(new Error(`KvCache.set failed setting key [${this.key}] to value ${JSON.stringify(setter,(_,v)=>typeof v=='bigint'?''+v:v)}`, { cause: reason })))
         snail.lazy().catch(() => {})
 
         this.gate?.resolve()
