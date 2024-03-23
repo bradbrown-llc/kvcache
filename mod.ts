@@ -2,7 +2,7 @@ import { AIQ } from 'https://cdn.jsdelivr.net/gh/bradbrown-llc/aiq@0.0.0/mod.ts'
 import { Lazy } from 'https://cdn.jsdelivr.net/gh/bradbrown-llc/lazy@0.0.0/mod.ts'
 import { Gate } from 'https://cdn.jsdelivr.net/gh/bradbrown-llc/gate@0.0.0/mod.ts'
 import { Snail } from 'https://cdn.jsdelivr.net/gh/bradbrown-llc/snail@0.0.0/mod.ts'
-import { KvVertigo } from 'https://cdn.jsdelivr.net/gh/bradbrown-llc/kvvertigo@0.0.1/mod.ts'
+import { KvVertigo } from 'https://cdn.jsdelivr.net/gh/bradbrown-llc/kvvertigo@0.0.2/mod.ts'
 
 export type Fallbacks<T> = { value:T, expireIn:number }
 
